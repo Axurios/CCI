@@ -8,7 +8,7 @@ log in on Earth Engine following the instructions.
 
 ## Dataset building
 windows : run ` .\setup\windows\data.ps1 `  
-linux : run `bash .\setup\linux\data.sh `
+linux : run `bash .\setup\default\data.sh `
 
 ### Data stockage:
 Google EarthEngine / GeoTessera  *(run once, slow, quota-limited)*  

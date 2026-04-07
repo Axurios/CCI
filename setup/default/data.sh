@@ -10,7 +10,8 @@ if ! command -v uv &> /dev/null; then
 fi
 
 # 3. Install bulk packages
-uv pip install numpy matplotlib scikit-learn earthengine-api
+uv pip install numpy matplotlib scikit-learn earthengine-api opencv-python
+uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 echo -e "\e[36mbulk packages installed...\e[0m"
 
 # 4. Clone and install the geotessera repository

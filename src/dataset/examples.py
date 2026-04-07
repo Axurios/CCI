@@ -3,12 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from urllib.error import HTTPError
-import math
-import random
-
-import torch
-from torch.utils.data import Dataset, DataLoader
-import numpy as np, os, json
+import math, random, torch
+from torch.utils.data import Dataset, DataLoader, json
 from pathlib import Path
 from sklearn.preprocessing import StandardScaler
 
@@ -18,9 +14,7 @@ elif '' in sys.path:
     sys.path.remove('')
 
 from geotessera import GeoTessera
-import ee
-import cv2
-import tifffile
+import ee, cv2, tifffile
 
 downscale = 10
 
