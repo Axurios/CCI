@@ -1,8 +1,20 @@
 # This script temporarily adds Mamba to the PATH for the current terminal session.
 
 # 1. Define Paths
-$mambaBase = "C:\Users\Alexa\miniforge3"
-$mambaBin = "$mambaBase\Library\bin"
+# $mambaBase = "C:\Users\Alexa\miniforge3"
+# $mambaBin = "$mambaBase\Library\bin"
+$condaBase = & conda info --base
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Conda not found in PATH. Please install Conda or Mambaforge first."
+    return
+}
+
+$mambaBase = $condaBase.Trim()  # remove extra whitespace
+$mambaBin = Join-Path $mambaBase "Library\bin"
+Write-Host "Detected Mamba base: $mambaBase"
+
+
+
 $envName = "esa_env"
 $pythonVersion = "3.11"
 $envPath = "$mambaBase\envs\$envName"

@@ -1,6 +1,10 @@
 
 # Setup
 ## Environment setup
+first test if you already have mamba installed, by running ` mamba --version ` <br>
+if not check conda :   ` conda --version ` if it's there, do  ` conda install mamba -n base -c conda-forge ` <br>
+if no conda detected, follow the instructions of https://github.com/conda-forge/miniforge#mambaforge <br>
+
 Change in the 'env.ps1' file your Conda/Mamba path, then in command line :  <br>
 windows : run  ` .\setup\windows\env.ps1 `  <br>
 linux : run `bash .\setup\default\env.sh `  <br>

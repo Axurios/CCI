@@ -3,8 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from urllib.error import HTTPError
-import math, random, torch
-from torch.utils.data import Dataset, DataLoader, json
+import math, random, torch, json
+from torch.utils.data import Dataset, DataLoader
 from pathlib import Path
 from sklearn.preprocessing import StandardScaler
 
@@ -22,82 +22,82 @@ output_dir = "data"
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
-gt = GeoTessera()
-print("downloading files")
-embedding, crs, transform = gt.fetch_embedding(
-    lon=-0.1276,
-    lat=51.5072,
-    year=2020
-)
+# gt = GeoTessera()
+# print("downloading files")
+# embedding, crs, transform = gt.fetch_embedding(
+#     lon=-0.1276,
+#     lat=51.5072,
+#     year=2020
+# )
 
-h, w, c = embedding.shape
+# h, w, c = embedding.shape
 
-new_w = w // downscale ; new_h = h // downscale
-embedding = cv2.resize(embedding, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
-h, w, c = embedding.shape
+# new_w = w // downscale ; new_h = h // downscale
+# embedding = cv2.resize(embedding, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+# h, w, c = embedding.shape
 
-# left_lon = transform[2] ; top_lat = transform[5]
-# pixel_width = transform[0] ; pixel_height = transform[4] # This is usually negative because pixels go 'down'
+# # left_lon = transform[2] ; top_lat = transform[5]
+# # pixel_width = transform[0] ; pixel_height = transform[4] # This is usually negative because pixels go 'down'
 
-# # Boundaries
-# right_lon = left_lon + (w * pixel_width)
-# bottom_lat = top_lat + (h * pixel_height)
+# # # Boundaries
+# # right_lon = left_lon + (w * pixel_width)
+# # bottom_lat = top_lat + (h * pixel_height)
 
-# # The standard bounding box (min_x, min_y, max_x, max_y)
+# # # The standard bounding box (min_x, min_y, max_x, max_y)
+# # tile_bbox = (left_lon, bottom_lat, right_lon, top_lat)
+
+# # print(f"The exact bounding box for this tile is: {tile_bbox}")
+
+# clean_crs = str(crs)
+# clean_transform = [float(x) for x in transform[:6]]
+# clean_transform[0] = clean_transform[0] * downscale  # New pixel width
+# clean_transform[4] = clean_transform[4] * downscale
+
+# left_lon = clean_transform[2] ; top_lat = clean_transform[5]
+# right_lon = left_lon + (new_w * clean_transform[0])
+# bottom_lat = top_lat + (new_h * clean_transform[4])
 # tile_bbox = (left_lon, bottom_lat, right_lon, top_lat)
-
 # print(f"The exact bounding box for this tile is: {tile_bbox}")
 
-clean_crs = str(crs)
-clean_transform = [float(x) for x in transform[:6]]
-clean_transform[0] = clean_transform[0] * downscale  # New pixel width
-clean_transform[4] = clean_transform[4] * downscale
 
-left_lon = clean_transform[2] ; top_lat = clean_transform[5]
-right_lon = left_lon + (new_w * clean_transform[0])
-bottom_lat = top_lat + (new_h * clean_transform[4])
-tile_bbox = (left_lon, bottom_lat, right_lon, top_lat)
-print(f"The exact bounding box for this tile is: {tile_bbox}")
+# ee.Initialize(project="alexcloud-489214")  # already authenticated
+# london_geom = ee.Geometry.Rectangle(
+#     coords=list(tile_bbox), 
+#     proj=clean_crs, 
+#     geodesic=False
+# )
 
+# agb_image = (ee.ImageCollection("projects/sat-io/open-datasets/ESA/ESA_CCI_AGB")
+#              .filterDate('2020-01-01', '2021-01-01')
+#              .first()
+#              .select('AGB')
+# )
 
-ee.Initialize(project="alexcloud-489214")  # already authenticated
-london_geom = ee.Geometry.Rectangle(
-    coords=list(tile_bbox), 
-    proj=clean_crs, 
-    geodesic=False
-)
+# # agb_resampled = agb_image.reproject(crs=clean_crs, crsTransform=clean_transform)
 
-agb_image = (ee.ImageCollection("projects/sat-io/open-datasets/ESA/ESA_CCI_AGB")
-             .filterDate('2020-01-01', '2021-01-01')
-             .first()
-             .select('AGB')
-)
+# url = agb_image.getDownloadURL({
+#     'region': london_geom,
+#     'format': 'GEO_TIFF', 
+#     'dimensions': f"{w}x{h}", # Forces GEE to match GeoTessera's width/height exactly
+#     'crs': clean_crs,
+#     'crsTransform': clean_transform,
+# })
 
-# agb_resampled = agb_image.reproject(crs=clean_crs, crsTransform=clean_transform)
+# response = requests.get(url)
+# # with open(file_path, 'wb') as f:
+# #     for chunk in response.iter_content(chunk_size=8192):
+# #         f.write(chunk)
+# with io.BytesIO(response.content) as f:
+#     # Use PIL to open the TIFF and convert to a numpy array
+#     agb_array = np.array(PIL.Image.open(f))
 
-url = agb_image.getDownloadURL({
-    'region': london_geom,
-    'format': 'GEO_TIFF', 
-    'dimensions': f"{w}x{h}", # Forces GEE to match GeoTessera's width/height exactly
-    'crs': clean_crs,
-    'crsTransform': clean_transform,
-})
+# agb_array = np.nan_to_num(agb_array, nan=0.0, posinf=0.0, neginf=0.0)
+# agb_array[agb_array < 0] = 0
+# # agb_data = agb_resampled.sampleRectangle(region=london_geom).getInfo()
+# # agb_array = np.array(agb_data['properties']['AGB'])
 
-response = requests.get(url)
-# with open(file_path, 'wb') as f:
-#     for chunk in response.iter_content(chunk_size=8192):
-#         f.write(chunk)
-with io.BytesIO(response.content) as f:
-    # Use PIL to open the TIFF and convert to a numpy array
-    agb_array = np.array(PIL.Image.open(f))
-
-agb_array = np.nan_to_num(agb_array, nan=0.0, posinf=0.0, neginf=0.0)
-agb_array[agb_array < 0] = 0
-# agb_data = agb_resampled.sampleRectangle(region=london_geom).getInfo()
-# agb_array = np.array(agb_data['properties']['AGB'])
-
-print(f"GeoTessera Shape: {embedding.shape[:2]}")
-print(f"Biomass Array Shape: {agb_array.shape}")
+# print(f"GeoTessera Shape: {embedding.shape[:2]}")
+# print(f"Biomass Array Shape: {agb_array.shape}")
 
 
 # flat_emb = embedding.reshape(-1, c)
@@ -178,22 +178,21 @@ for loc in locations:
 
     try:
         point = ee.Geometry.Point([loc['lon'], loc['lat']]) # 10km buffer = 20km x 20km area (~20x20 raw AlphaEarth pixels)
-        buffer_size = 10000  
+        buffer_size = 10000 ; master_dim = 256 ; crs = 'EPSG:4326'
         geom = point.buffer(buffer_size).bounds()
         
-        # Extract BBox for external APIs (min_lon, min_lat, max_lon, max_lat)
         coords = geom.coordinates().get(0).getInfo()
         lons, lats = [c[0] for c in coords], [c[1] for c in coords]
         master_bbox = (min(lons), min(lats), max(lons), max(lats))
-
-        # --- 2. FETCH GEOTESSERA (Matches the Center) ---
-        # Note: GeoTessera usually fetches a fixed tile around a point.
         # We fetch it and then resize it to our master grid.
-        embedding, crs, transform = gt.fetch_embedding(
-            lon=loc['lon'], lat=loc['lat'], year=loc['year']
-        )
+        embedding, crs, transform = gt.fetch_embedding(lon=loc['lon'], lat=loc['lat'], year=loc['year'])
         # Resize to 256x256 to match the GEE outputs
-        embedding_resized = cv2.resize(embedding, (256, 256), interpolation=cv2.INTER_LINEAR)
+        px_width = (geom.coordinates().get(0).getInfo()[2][0] - geom.coordinates().get(0).getInfo()[0][0]) / master_dim
+        px_height = (geom.coordinates().get(0).getInfo()[1][1] - geom.coordinates().get(0).getInfo()[0][1]) / master_dim
+
+        # Use cv2 to resize, now keeping the master pixel scale
+        embedding_resized = cv2.resize(embedding, (master_dim, master_dim), interpolation=cv2.INTER_LINEAR)
+        # embedding_resized = cv2.resize(embedding, (256, 256), interpolation=cv2.INTER_LINEAR)
 
         # --- 3. FETCH ESA BIOMASS (Aligned to Master Geometry) ---
         agb_image = (ee.ImageCollection("projects/sat-io/open-datasets/ESA/ESA_CCI_AGB")
@@ -282,8 +281,7 @@ else:
         axes = np.expand_dims(axes, axis=0)
 
     for idx, loc in enumerate(successfully_processed):
-        row = idx // cols
-        col = idx % cols
+        row = idx // cols ; col = idx % cols
         fname = loc['name'].lower()
         emb = np.load(os.path.join(emb_dir, f"{fname}_x.npy"))
         agb = np.load(os.path.join(target_dir, f"{fname}_y.npy"))
@@ -331,8 +329,7 @@ else:
 
     # Hide unused axes
     for idx in range(n, rows*cols):
-        row = idx // cols
-        col = idx % cols
+        row = idx // cols ; col = idx % cols
         axes[row, 3*col].axis('off')
         axes[row, 3*col+1].axis('off')
         axes[row, 3*col+2].axis('off')
@@ -345,77 +342,77 @@ else:
 
 
 
-from scipy.stats import pearsonr
+# from scipy.stats import pearsonr
 
-def plot_average_correlations(processed_list):
-    if not processed_list:
-        print("No data to average.")
-        return
+# def plot_average_correlations(processed_list):
+#     if not processed_list:
+#         print("No data to average.")
+#         return
 
-    # 0. Setup Plots Directory
-    plot_dir = os.path.join(output_dir, "correlation_plots")
-    os.makedirs(plot_dir, exist_ok=True)
+#     # 0. Setup Plots Directory
+#     plot_dir = os.path.join(output_dir, "correlation_plots")
+#     os.makedirs(plot_dir, exist_ok=True)
 
-    all_gt_corrs = []
-    all_ae_corrs = []
+#     all_gt_corrs = []
+#     all_ae_corrs = []
 
-    print(f"Aggregating correlations for {len(processed_list)} locations...")
+#     print(f"Aggregating correlations for {len(processed_list)} locations...")
 
-    for loc in processed_list:
-        fname = loc['name'].lower()
+#     for loc in processed_list:
+#         fname = loc['name'].lower()
         
-        # Load data
-        gt_emb = np.load(os.path.join(emb_dir, f"{fname}_x.npy"))
-        ae_emb = np.load(os.path.join(ae_emb_dir, f"{fname}_ae.npy"))
-        agb = np.load(os.path.join(target_dir, f"{fname}_y.npy")).flatten()
+#         # Load data
+#         gt_emb = np.load(os.path.join(emb_dir, f"{fname}_x.npy"))
+#         ae_emb = np.load(os.path.join(ae_emb_dir, f"{fname}_ae.npy"))
+#         agb = np.load(os.path.join(target_dir, f"{fname}_y.npy")).flatten()
 
-        # Calculate GT correlations for this image
-        gt_img_corrs = []
-        for c in range(gt_emb.shape[-1]):
-            r, _ = pearsonr(gt_emb[:, :, c].flatten(), agb)
-            gt_img_corrs.append(np.nan_to_num(r))
-        all_gt_corrs.append(gt_img_corrs)
+#         # Calculate GT correlations for this image
+#         gt_img_corrs = []
+#         for c in range(gt_emb.shape[-1]):
+#             r, _ = pearsonr(gt_emb[:, :, c].flatten(), agb)
+#             gt_img_corrs.append(np.nan_to_num(r))
+#         all_gt_corrs.append(gt_img_corrs)
 
-        # Calculate AE correlations for this image
-        ae_img_corrs = []
-        for c in range(ae_emb.shape[-1]):
-            r, _ = pearsonr(ae_emb[:, :, c].flatten(), agb)
-            ae_img_corrs.append(np.nan_to_num(r))
-        all_ae_corrs.append(ae_img_corrs)
+#         # Calculate AE correlations for this image
+#         ae_img_corrs = []
+#         for c in range(ae_emb.shape[-1]):
+#             r, _ = pearsonr(ae_emb[:, :, c].flatten(), agb)
+#             ae_img_corrs.append(np.nan_to_num(r))
+#         all_ae_corrs.append(ae_img_corrs)
 
-    # 1. Compute Averages
-    avg_gt = np.mean(all_gt_corrs, axis=0)
-    avg_ae = np.mean(all_ae_corrs, axis=0)
+#     # 1. Compute Averages
+#     avg_gt = np.mean(all_gt_corrs, axis=0)
+#     avg_ae = np.mean(all_ae_corrs, axis=0)
     
-    # Optional: Compute Standard Deviation to show consistency
-    std_gt = np.std(all_gt_corrs, axis=0)
-    std_ae = np.std(all_ae_corrs, axis=0)
+#     # Optional: Compute Standard Deviation to show consistency
+#     std_gt = np.std(all_gt_corrs, axis=0)
+#     std_ae = np.std(all_ae_corrs, axis=0)
 
-    # 2. Plotting
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 12))
+#     # 2. Plotting
+#     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 12))
     
-    # GeoTessera Average
-    ax1.bar(range(len(avg_gt)), avg_gt, yerr=std_gt, color='skyblue', edgecolor='navy', alpha=0.8, capsize=3)
-    ax1.set_title(f"Average GeoTessera vs Biomass Correlation (n={len(processed_list)})", fontsize=14)
-    ax1.set_ylabel("Mean Pearson r")
-    ax1.set_ylim(-1, 1)
-    ax1.grid(axis='y', linestyle='--', alpha=0.5)
+#     # GeoTessera Average
+#     ax1.bar(range(len(avg_gt)), avg_gt, yerr=std_gt, color='skyblue', edgecolor='navy', alpha=0.8, capsize=3)
+#     ax1.set_title(f"Average GeoTessera vs Biomass Correlation (n={len(processed_list)})", fontsize=14)
+#     ax1.set_ylabel("Mean Pearson r")
+#     ax1.set_ylim(-1, 1)
+#     ax1.grid(axis='y', linestyle='--', alpha=0.5)
 
-    # AlphaEarth Average
-    ax2.bar(range(len(avg_ae)), avg_ae, yerr=std_ae, color='salmon', edgecolor='darkred', alpha=0.8, capsize=3)
-    ax2.set_title(f"Average AlphaEarth vs Biomass Correlation (n={len(processed_list)})", fontsize=14)
-    ax2.set_ylabel("Mean Pearson r")
-    ax2.set_xlabel("Channel Index")
-    ax2.set_ylim(-1, 1)
-    ax2.grid(axis='y', linestyle='--', alpha=0.5)
+#     # AlphaEarth Average
+#     ax2.bar(range(len(avg_ae)), avg_ae, yerr=std_ae, color='salmon', edgecolor='darkred', alpha=0.8, capsize=3)
+#     ax2.set_title(f"Average AlphaEarth vs Biomass Correlation (n={len(processed_list)})", fontsize=14)
+#     ax2.set_ylabel("Mean Pearson r")
+#     ax2.set_xlabel("Channel Index")
+#     ax2.set_ylim(-1, 1)
+#     ax2.grid(axis='y', linestyle='--', alpha=0.5)
 
-    plt.tight_layout()
+#     plt.tight_layout()
     
-    # 3. Save
-    save_path = os.path.join(plot_dir, "global_average_correlation.png")
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    print(f"✅ Global average correlation plot saved to: {save_path}")
-    plt.show()
+#     # 3. Save
+#     save_path = os.path.join(plot_dir, "global_average_correlation.png")
+#     plt.savefig(save_path, dpi=300, bbox_inches='tight')
+#     print(f"✅ Global average correlation plot saved to: {save_path}")
+#     plt.show()
 
-# Run the averaging plot
-plot_average_correlations(successfully_processed)
+# # Run the averaging plot
+# plot_average_correlations(successfully_processed)
