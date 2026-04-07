@@ -1,10 +1,10 @@
 
 # Setup
 ## Environment setup
-Change in the 'env.ps1' file your Conda/Mamba path, then in command line : 
-windows : run  ` .\setup\windows\env.ps1 `
-linux : run `bash .\setup\linux\env.sh `
-log in on Earth Engine following the instructions.
+Change in the 'env.ps1' file your Conda/Mamba path, then in command line :  <br>
+windows : run  ` .\setup\windows\env.ps1 `  <br>
+linux : run `bash .\setup\default\env.sh `  <br>
+log in on Earth Engine following the instructions.  
 
 ## Dataset building
 windows : run ` .\setup\windows\data.ps1 `  
