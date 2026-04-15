@@ -6,13 +6,13 @@ if not check conda :   ` conda --version ` if it's there, do  ` conda install ma
 if no conda detected, follow the instructions of https://github.com/conda-forge/miniforge#mambaforge <br>
 
 Change in the 'env.ps1' file your Conda/Mamba path, then in command line :  <br>
-windows : run  ` .\setup\windows\env.ps1 `  <br>
-linux : run `bash .\setup\default\env.sh `  <br>
+windows : run  ` .\setup\windows\env.ps1 `          <br>
+apple/linux : run `bash .\setup\default\env.sh `    <br>
 log in on Earth Engine following the instructions.  
 
 ## Dataset building
 windows : run ` .\setup\windows\data.ps1 `  
-linux : run `bash .\setup\default\data.sh `
+apple/linux : run `bash .\setup\default\data.sh `
 
 ### Data stockage:
 Google EarthEngine / GeoTessera  *(run once, slow, quota-limited)*  

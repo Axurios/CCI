@@ -111,7 +111,7 @@ class BiomassDataset(Dataset):
                 print(f"Warning: missing files for '{name}', skipping.")
                 continue
 
-            ae = np.load(ae_path, mmap_mode='r')   # (H, W, 128)
+            ae = np.load(ae_path, mmap_mode='r', )   # (H, W, 128)
             tgt = np.load(tgt_path, mmap_mode='r')   # (H, W)
             # emb = np.load(emb_path, mmap_mode='r')   # (H, W, C_ae) or (H, W, 128)
 
@@ -119,7 +119,7 @@ class BiomassDataset(Dataset):
                 emb = np.load(emb_path, mmap_mode='r')
                
 
-            H, W, _ = emb.shape
+            H, W, _ = tgt.shape
             self.tiles.append({
                 "name": name,
                 "ae":  ae,
@@ -282,8 +282,8 @@ if __name__ == "__main__":
 
     # Step 1: compute and save normalization stats (run once)
     print("=== Computing normalization stats ===")
-    compute_normalization_stats(DATA_DIR, subdir="embeddings",    out="norm_stats.json")
-    compute_normalization_stats(DATA_DIR, subdir="ae_embeddings", out="norm_stats_ae.json")
+    tessera_stats = compute_normalization_stats(DATA_DIR, subdir="embeddings", out="norm_stats.json")
+    ae_stats      = compute_normalization_stats(DATA_DIR, subdir="ae_embeddings", out="norm_stats_ae.json")
 
     # Step 2: sanity check
     print("\n=== Sanity check ===")

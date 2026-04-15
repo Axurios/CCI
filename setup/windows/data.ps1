@@ -11,7 +11,7 @@ uv pip install numpy matplotlib scikit-learn earthengine-api opencv-python tdqm
 uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 Write-Host "bulk packages installed..." -ForegroundColor Cyan
 
-# 4. Clone the geotessera repository
+# # 4. Clone the geotessera repository
 $moduleInstalled = python -c "import geotessera" 2>$null
 $lastExit = $LASTEXITCODE
 if ($lastExit -ne 0) {
@@ -56,5 +56,5 @@ if ($checkResult -like "*SUCCESS*") {
 
 # Building the dataset
 Write-Host "Building the dataset..."  -ForegroundColor Cyan
-uv run python -m src.dataset.build
+uv run python -m src.dataset.examples
 #uv run python -m src.dataset.build_dataset
