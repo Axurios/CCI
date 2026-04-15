@@ -7,7 +7,7 @@ if (-not (Get-Command "uv" -ErrorAction SilentlyContinue)) {
     pip install uv
 }
  
-uv pip install numpy matplotlib scikit-learn earthengine-api opencv-python
+uv pip install numpy matplotlib scikit-learn earthengine-api opencv-python tdqm
 uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 Write-Host "bulk packages installed..." -ForegroundColor Cyan
 
@@ -56,5 +56,5 @@ if ($checkResult -like "*SUCCESS*") {
 
 # Building the dataset
 Write-Host "Building the dataset..."  -ForegroundColor Cyan
-uv run python -m src.dataset.examples
+uv run python -m src.dataset.build
 #uv run python -m src.dataset.build_dataset
