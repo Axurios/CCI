@@ -220,7 +220,7 @@ else:
         axes[row, 2*col].axis('off')
         # Add colorbar without shrinking the axis
         # cbar = fig.colorbar(im, ax=axes[row, 2*col+1], orientation='vertical', fraction=0.05, pad=0.02)
-        # cbar.ax.tick_params(labelsize=8)
+     
 
         # Column 2: AE Embedding
         if ae_emb.ndim == 3 and (not np.all(ae_emb==0) and not np.all(np.isnan(ae_emb))):
