@@ -34,8 +34,8 @@ for d in [emb_dir, ae_emb_dir, target_dir]:
         os.makedirs(d)
 
 
-# gt = GeoTessera()
-ee.Initialize(project="alexcloud-489214")
+gt = GeoTessera()
+ee.Initialize(project="esa-cci")
 
 # handpicked example locations to test (lat, lon, year)
 locations = [

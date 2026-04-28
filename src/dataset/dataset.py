@@ -24,7 +24,7 @@ if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
 gt = GeoTessera()
-ee.Initialize(project="alexcloud-489214")  # already authenticated
+ee.Initialize(project="esa-cci")  # already authenticated
 
 
 
@@ -94,10 +94,15 @@ class BiomassDataset(Dataset):
                 raise KeyError(f"Split '{split}' not found in {split_file}")
             names = manifest[split]
         else:
-            all_names = [f.stem.replace("_x", "")
-                         for f in emb_dir.glob("*_x.npy")]
+            # all_names = [f.stem.replace("_x", "")
+            #              for f in emb_dir.glob("*_x.npy")]
+            # if not all_names:
+            #     raise FileNotFoundError(f"No *_x.npy files found in {emb_dir}")
+
+            all_names = [f.stem.replace("_ae", "")
+                            for f in ae_dir.glob("*_ae.npy")]
             if not all_names:
-                raise FileNotFoundError(f"No *_x.npy files found in {emb_dir}")
+                raise FileNotFoundError(f"No *_ae.npy files found in {ae_dir}")
             names = self._default_split(all_names, split)
 
         # ── Memory-map tiles (no RAM cost until sliced) ───────────────────────
@@ -117,7 +122,8 @@ class BiomassDataset(Dataset):
 
             if not use_ae:
                 emb = np.load(emb_path, mmap_mode='r')
-               
+            print(f"Names for this split: {names}")
+
 
             H, W, _ = tgt.shape
             self.tiles.append({
@@ -130,8 +136,10 @@ class BiomassDataset(Dataset):
             })
 
         if not self.tiles:
-            raise RuntimeError("No valid tiles loaded — check your data directory.")
-
+            print(f"Warning: no tiles for split '{split}' — this split will be empty.")
+            self.index = []
+            return
+        
         # ── Flat patch index: (tile_idx, row_start, col_start) ───────────────
         self.index = []
         for ti, tile in enumerate(self.tiles):
@@ -258,9 +266,9 @@ def make_dataloaders(data_dir, patch_size=64, batch_size=32, use_ae=False, num_w
     Returns (train_loader, val_loader, test_loader).
     Augmentation is enabled only for the training split.
     """
-    train_ds = BiomassDataset(data_dir, patch_size=patch_size, split="train", split_file=split_file, use_ae=use_ae,  augment=True)
-    val_ds   = BiomassDataset(data_dir, patch_size=patch_size, split="val",   split_file=split_file, use_ae=use_ae, augment=False)
-    test_ds  = BiomassDataset(data_dir, patch_size=patch_size, split="test",  split_file=split_file, use_ae=use_ae, augment=False)
+    train_ds = BiomassDataset(data_dir, patch_size=patch_size, split="train", split_file=split_file, use_ae=use_ae,  use_augment=True)
+    val_ds   = BiomassDataset(data_dir, patch_size=patch_size, split="val",   split_file=split_file, use_ae=use_ae, use_augment=False)
+    test_ds  = BiomassDataset(data_dir, patch_size=patch_size, split="test",  split_file=split_file, use_ae=use_ae, use_augment=False)
 
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,  num_workers=num_workers, pin_memory=True)
     val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
@@ -282,7 +290,7 @@ if __name__ == "__main__":
 
     # Step 1: compute and save normalization stats (run once)
     print("=== Computing normalization stats ===")
-    tessera_stats = compute_normalization_stats(DATA_DIR, subdir="embeddings", out="norm_stats.json")
+    #tessera_stats = compute_normalization_stats(DATA_DIR, subdir="embeddings", out="norm_stats.json")
     ae_stats      = compute_normalization_stats(DATA_DIR, subdir="ae_embeddings", out="norm_stats_ae.json")
 
     # Step 2: sanity check
