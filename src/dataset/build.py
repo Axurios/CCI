@@ -28,7 +28,8 @@ if project:
     ee.Initialize(project=project)
 else:
     print("EE_PROJECT env var not set, using default project")
-    ee.Initialize(project="alexcloud-489214")  # fallback
+    ee.Initialize(project="esa-cci")  # fallback "alexcloud-489214"
+ee.Initialize(project=project)
 
 MASTER_DIM = 256
 BUFFER_DEG = 0.09   # ~10km

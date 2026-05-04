@@ -24,8 +24,10 @@ if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
 # gt = GeoTessera()
-ee.Initialize(project="alexcloud-489214")  # already authenticated
-
+# ee.Initialize(project="alexcloud-489214")  # already authenticated
+project = os.getenv("EE_PROJECT", "esa-cci")
+# project = os.getenv('EE_PROJECT', 'alexcloud-489214')
+ee.Initialize(project=project)
 
 
 
