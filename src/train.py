@@ -26,7 +26,7 @@ class Config:
     model_class: type = PointWiseModel
     batch_size: int = 16
     patch_size: int = 128
-    epochs: int = 100
+    epochs: int = 2000
     lr: float = 1e-4
 
     exp_name: str = "0"
@@ -79,12 +79,15 @@ def train(
     # MODEL
     # =========================
     sample_x, sample_y, sample_name = train_ds[0]
-    print(sample_x.shape, (sample_y.squeeze(-1)).shape)
-    # print(sample_x, sample_y)
-    print(sample_y.unique().numel(), "unique values in y")
-    print(sample_x.unique().numel(), "unique values in x")
-    print(sample_x.min(), sample_x.max(), sample_x.std())
-    in_channels = sample_x.shape[0]
+    in_channels = sample_x.shape[-1]
+
+    # print(sample_x.shape, (sample_y.squeeze(-1)).shape)
+    # # print(sample_x, sample_y)
+    # print(sample_y.unique().numel(), "unique values in y")
+    # print(sample_x.unique().numel(), "unique values in x")
+    # print(sample_x.min(), sample_x.max(), sample_x.std())
+    # print(sample_x.shape)
+    
 
     model = cfg.model_class(in_channels).to(device)
     wandb.watch(model, log_freq=100)
@@ -100,39 +103,38 @@ def train(
     pbar_epoch = tqdm(range(cfg.epochs), desc="Overall Progress")
 
 
-    x_batch, y_batch, _ = next(iter(train_loader))
+    # x_batch, y_batch, name_batch = next(iter(train_loader))
+    # x_vis = x_batch.mean(dim=-1)
+    # mask = torch.isinf(x_vis) ; mask = mask.unsqueeze(-1) ; mask = mask.expand_as(x_batch) 
+    # x_batch = torch.where(mask, torch.zeros_like(x_batch), x_batch)
 
-    print("x batch:", x_batch.shape)  # (B, C, P, P)
-    print("y batch:", y_batch.shape)  # (B, P, P)
+    # print("x batch:", x_batch.shape)  # (B, C, P, P)
+    # print("y batch:", y_batch.shape)  # (B, P, P)
 
-    B = x_batch.shape[0] ; cols = math.ceil(math.sqrt(B)) ; rows = math.ceil(B / cols)
+    # B = x_batch.shape[0] ; cols = math.ceil(math.sqrt(B)) ; rows = math.ceil(B / cols)
+    
+    # fig, axes = plt.subplots(rows, 2*cols, figsize=(4*2*cols, 4*rows))
+    # if rows == 1: axes = np.expand_dims(axes, axis=0)
+    # if axes.ndim == 1: axes = np.expand_dims(axes, axis=0)
+    # for i in range(B):
+    #     row = i // cols ; col = i % cols
+    #     x_vis = x_batch[i].mean(dim=-1).cpu().numpy()
 
-    fig, axes = plt.subplots(rows, 2*cols, figsize=(4*2*cols, 4*rows))
-    if rows == 1: axes = np.expand_dims(axes, axis=0)
-    if axes.ndim == 1: axes = np.expand_dims(axes, axis=0)
+    #     axes[row, 2 * col].imshow(x_vis, cmap='viridis')
+    #     axes[row, 2 * col].axis('off')
 
-    for i in range(B):
-        row = i // cols ; col = i % cols
-        x_vis = x_batch[i].mean(dim=0).cpu().numpy()
+    #     # y_vis = y_batch[i].cpu().numpy()
+    #     y_vis = y_batch[i].squeeze(0).cpu().numpy()
 
-        axes[row, 2 * col].imshow(x_vis, cmap='viridis')
-        axes[row, 2 * col].axis('off')
+    #     axes[row, 2 * col + 1].imshow(y_vis, cmap='YlGn')
+    #     axes[row, 2 * col + 1].axis('off')
 
-        # y_vis = y_batch[i].cpu().numpy()
-        y_vis = y_batch[i].squeeze(0).cpu().numpy()
-
-        axes[row, 2 * col + 1].imshow(y_vis, cmap='YlGn')
-        axes[row, 2 * col + 1].axis('off')
-
-    plt.tight_layout()
-    plt.show()
-
-
-
-
+    # plt.tight_layout()
+    # plt.show()
 
 
-    # return 0
+
+
     for epoch in range(cfg.epochs):
 
         # ---- train ----
@@ -141,22 +143,25 @@ def train(
         for x,y,_ in train_bar:
             # x,y = xy
             x = x.to(device) ; y = y.to(device).squeeze(-1) #.squeeze(-1) #.squeeze(1)
-            print(x,y)
+            x_vis = x.mean(dim=-1) ; mask = torch.isinf(x_vis) ; mask = mask.unsqueeze(-1) ; mask = mask.expand_as(x) 
+            x = torch.where(mask, torch.zeros_like(x), x)
             
             pred = model(x)
-            print("pred", pred)
+            # print("pred", pred)
             # print(f"pred {pred}, true {y}")
             loss = loss_fn(pred, y)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            # print("step ok")
-            train_loss += loss.item()
 
+            train_loss += loss.item()
             train_bar.set_postfix(batch_loss=f"{loss.item():.4f}")
             wandb.log({"batch_loss": loss.item()})
 
         avg_train_loss =  train_loss/len(train_loader)
+
+
+
 
         # ---- val ----
         model.eval() ; val_loss = 0
@@ -164,6 +169,8 @@ def train(
         with torch.no_grad():
             for x, y, _ in val_bar:
                 x = x.to(device) ; y = y.to(device).squeeze(-1)
+                x_vis = x.mean(dim=-1) ; mask = torch.isinf(x_vis) ; mask = mask.unsqueeze(-1) ; mask = mask.expand_as(x) 
+                x = torch.where(mask, torch.zeros_like(x), x)
 
                 pred = model(x)
                 loss = loss_fn(pred, y)
@@ -236,3 +243,50 @@ if __name__ == "__main__":
 
     train(cfg=config)
 
+
+
+
+
+
+
+
+    # fig, axes = plt.subplots(rows, 2*cols, figsize=(4*2*cols, 4*rows))
+    # if rows == 1: axes = np.expand_dims(axes, axis=0)
+    # if axes.ndim == 1: axes = np.expand_dims(axes, axis=0)
+    # for i in range(B):
+    #     row = i // cols ; col = i % cols
+    #     x_sample = x_batch[i]  # (H, W, C)
+    #     # mean over channels
+    #     x_vis = x_sample.mean(dim=-1)
+    #     # detect invalid pixels
+    #     invalid_mask = torch.isinf(x_vis)
+
+    #     # convert for plotting
+    #     x_vis_np = x_vis.cpu().numpy()
+
+    #     axes[row, 2 * col].imshow(x_vis_np, cmap='viridis')
+    #     axes[row, 2 * col].axis('off')
+
+    #     # 🚨 overlay invalid pixels in red
+    #     if invalid_mask.any():
+    #         mask_np = invalid_mask.cpu().numpy()
+    #         axes[row, 2 * col].imshow(
+    #             mask_np,
+    #             cmap='Reds',
+    #             alpha=0.5  # transparent overlay
+    #         )
+    #         axes[row, 2 * col].set_title(
+    #             f"{name_batch[i]}\n⚠️ invalid pixels",
+    #             color='red',
+    #             fontsize=8
+    #         )
+    #     else:
+    #         axes[row, 2 * col].set_title(name_batch[i], fontsize=8)
+
+    #     # target
+    #     y_vis = y_batch[i].squeeze(0).cpu().numpy()
+    #     axes[row, 2 * col + 1].imshow(y_vis, cmap='YlGn')
+    #     axes[row, 2 * col + 1].axis('off')
+    
+    # plt.tight_layout()
+    # plt.show()

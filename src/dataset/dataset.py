@@ -177,8 +177,8 @@ class BiomassDataset(Dataset):
             y = y[..., None]
 
         # to tensor
-        x = torch.from_numpy(x).permute(2, 0, 1).float()
-        y = torch.from_numpy(y).permute(2, 0, 1).float()
+        x = torch.from_numpy(x).float()
+        y = torch.from_numpy(y).float()
 
         return x, y, name
 
