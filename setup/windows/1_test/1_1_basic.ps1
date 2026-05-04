@@ -1,16 +1,14 @@
-$env:EE_PROJECT="alexcloud-489214"
-
-
 # 1. Error Handling: Stop the script if any command fails
 $ErrorActionPreference = "Stop"
 
+$env:EE_PROJECT="alexcloud-489214"
 # 2. Install uv using standard pip install uv
 if (-not (Get-Command "uv" -ErrorAction SilentlyContinue)) {
     Write-Host "Installing uv..." -ForegroundColor Cyan
     pip install uv
 }
  
-uv pip install numpy matplotlib scikit-learn earthengine-api opencv-python tdqm
+uv pip install numpy matplotlib scikit-learn earthengine-api opencv-python tdqm wandb
 uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 Write-Host "bulk packages installed..." -ForegroundColor Cyan
 
@@ -34,29 +32,21 @@ if ($lastExit -ne 0) {
 
 
 
-
 # Check if Earth Engine credentials
 Write-Host "Checking Earth Engine credentials..." -ForegroundColor Cyan
 
 $pythonCode = @"
 import ee
+import os
 try:
-    # Try to initialize with your specific project
-    import os
-    project = os.getenv('EE_PROJECT')
-    if project:
-        ee.Initialize(project=project)
-    else:
-        print('EE_PROJECT env var not set, using default project')
-        ee.Initialize(project='alexcloud-489214')  # fallback
-        # ee.Initialize(project='alexcloud-489214')
+    project = os.getenv('EE_PROJECT', 'alexcloud-489214')
+    ee.Initialize(project=project)
     print('SUCCESS')
-except Exception:
-    print('FAIL')
+except Exception as e:
+    print(f'FAIL: {e}')
 "@
-# uv run python -c $pythonCode | Out-Null
 
-$checkResult = uv run python -c $pythonCode
+$checkResult = uv run python -c "$pythonCode"
 if ($checkResult -like "*SUCCESS*") {
     Write-Host "Earth Engine already authenticated." -ForegroundColor Green
 } else {
@@ -65,6 +55,6 @@ if ($checkResult -like "*SUCCESS*") {
 }
 
 # Building the dataset
-Write-Host "Building the dataset..."  -ForegroundColor Cyan
-uv run python -m src.dataset.build
-#uv run python -m src.dataset.build_dataset
+Write-Host "Starting training..."  -ForegroundColor Cyan
+$env:PYTHONPATH = "."
+uv run python -m src.train --exp_name 1 --run_name 1-basic --epochs 1 --batch_size 4

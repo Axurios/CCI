@@ -16,14 +16,14 @@ if os.getcwd() in sys.path:
 elif '' in sys.path:
     sys.path.remove('')
 
-from geotessera import GeoTessera
+# from geotessera import GeoTessera
 import ee
 
 output_dir = "data"
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
-gt = GeoTessera()
+# gt = GeoTessera()
 ee.Initialize(project="alexcloud-489214")  # already authenticated
 
 
@@ -56,121 +56,129 @@ class BiomassDataset(Dataset):
         augment     : random rot90 + horizontal flip (training only, optional)
     """
 
-    def __init__(self, data_dir, patch_size=64, split="train", split_file=None, use_ae=False, use_augment=False):
-        self.patch_size = patch_size ; self.use_ae = use_ae ; self.augment = use_augment
+    def __init__(self, data_dir, patch_size=64, split="train", split_ratio=(0.7, 0.15, 0.15), use_ae=False, augment=False):
+        # self.patch_size = patch_size ; self.use_ae = use_ae ; self.augment = augment
 
         data_dir = Path(data_dir)
-        emb_dir  = data_dir / "embeddings"
+        # emb_dir  = data_dir / "embeddings"
         ae_dir   = data_dir / "ae_embeddings"
-        tgt_dir  = data_dir / "targets"
+        y_dir  = data_dir / "targets"
 
-        # ── Normalization stats ───────────────────────────────────────────────
-        stats_path = data_dir / "norm_stats.json"
-        if stats_path.exists():
-            with open(stats_path) as f:
-                stats = json.load(f)
-            self.mean = np.array(stats["mean"], dtype=np.float32)
-            self.std  = np.array(stats["std"],  dtype=np.float32)
+        all_names = [f.stem.replace("_ae", "") for f in ae_dir.glob("*_ae.npy")]
+        all_names = sorted(all_names)
+
+        # simple split
+        random.shuffle(all_names)
+        n = len(all_names)
+        n_train = int(split_ratio[0] * n)
+        n_val   = int(split_ratio[1] * n)
+
+        if split == "train":
+            names = all_names[:n_train]
+        elif split == "val":
+            names = all_names[n_train:n_train + n_val]
         else:
-            print(f"Warning: {stats_path} not found — skipping GeoTessera normalization.")
-            self.mean = None ; self.std  = None
+            names = all_names[n_train + n_val:]
 
-        ae_stats_path = data_dir / "norm_stats_ae.json"
-        if ae_stats_path.exists():
-            with open(ae_stats_path) as f:
-                ae_stats = json.load(f)
-            self.ae_mean = np.array(ae_stats["mean"], dtype=np.float32)
-            self.ae_std  = np.array(ae_stats["std"],  dtype=np.float32)
-        else:
-            if use_ae:
-                print(f"Warning: {ae_stats_path} not found — skipping AE normalization.")
-            self.ae_mean = None ; self.ae_std  = None
+        self.samples = []
 
-        # ── Split manifest ────────────────────────────────────────────────────
-        if split_file and os.path.exists(split_file):
-            with open(split_file) as f:
-                manifest = json.load(f)
-            if split not in manifest:
-                raise KeyError(f"Split '{split}' not found in {split_file}")
-            names = manifest[split]
-        else:
-            all_names = [f.stem.replace("_x", "")
-                         for f in emb_dir.glob("*_x.npy")]
-            if not all_names:
-                raise FileNotFoundError(f"No *_x.npy files found in {emb_dir}")
-            names = self._default_split(all_names, split)
-
-        # ── Memory-map tiles (no RAM cost until sliced) ───────────────────────
-        self.tiles = []
         for name in names:
-            emb_path = emb_dir / f"{name}_x.npy"
-            ae_path  = ae_dir / f"{name}_ae.npy"
-            tgt_path = tgt_dir / f"{name}_y.npy"
+            ae_path = ae_dir / f"{name}_ae.npy"
+            y_path  = y_dir / f"{name}_y.npy"
 
-            if not ae_path.exists() or not tgt_path.exists():
-                print(f"Warning: missing files for '{name}', skipping.")
-                continue
+            if ae_path.exists() and y_path.exists():
+                self.samples.append((ae_path, y_path, name))
 
-            ae = np.load(ae_path, mmap_mode='r', )   # (H, W, 128)
-            tgt = np.load(tgt_path, mmap_mode='r')   # (H, W)
-            # emb = np.load(emb_path, mmap_mode='r')   # (H, W, C_ae) or (H, W, 128)
+        print(f"{split}: {len(self.samples)} tiles")
 
-            if not use_ae:
-                emb = np.load(emb_path, mmap_mode='r')
+        # ae_stats_path = data_dir / "norm_stats_ae.json"
+        # if ae_stats_path.exists():
+        #     with open(ae_stats_path) as f:
+        #         ae_stats = json.load(f)
+        #     self.ae_mean = np.array(ae_stats["mean"], dtype=np.float32)
+        #     self.ae_std  = np.array(ae_stats["std"],  dtype=np.float32)
+        #     print(f"Loaded AE normalization stats → mean shape {self.ae_mean}, std shape {self.ae_std}")
+        # else:
+        #     if use_ae:
+        #         print(f"Warning: {ae_stats_path} not found — skipping AE normalization.")
+        #     self.ae_mean = 0 ; self.ae_std  = 1
+
+        # # ── Split manifest ────────────────────────────────────────────────────
+        # print("Splitting the current data")
+        # if split_file and os.path.exists(split_file):
+        #     with open(split_file) as f:
+        #         manifest = json.load(f)
+        #     if split not in manifest:
+        #         raise KeyError(f"Split '{split}' not found in {split_file}")
+        #     names = manifest[split]
+        # else:
+        #     all_names = [f.stem.replace("_ae", "") for f in ae_dir.glob("*_ae.npy")]
+        #     if not all_names:
+        #         raise FileNotFoundError(f"No *_ae.npy files found in {ae_dir}")
+        #     names = self._default_split(all_names, split)
+
+        # # ── Memory-map tiles (no RAM cost until sliced) ───────────────────────
+        # self.tiles = []
+        # for name in names:
+        #     #emb_path = emb_dir / f"{name}_x.npy"
+        #     ae_path  = ae_dir / f"{name}_ae.npy"
+        #     tgt_path = tgt_dir / f"{name}_y.npy"
+
+        #     if not ae_path.exists() or not tgt_path.exists():
+        #         print(f"Warning: missing files for '{name}', skipping.")
+        #         continue
+
+        #     ae = np.load(ae_path, mmap_mode='r', )   # (H, W, 128)
+        #     tgt = np.load(tgt_path, mmap_mode='r')   # (H, W)
+        #     # emb = np.load(emb_path, mmap_mode='r')   # (H, W, C_ae) or (H, W, 128)
+
+        #     # if not use_ae:
+        #     #     emb = np.load(emb_path, mmap_mode='r')
                
 
-            H, W, _ = tgt.shape
-            self.tiles.append({
-                "name": name,
-                "ae":  ae,
-                "tgt":  tgt,
-                "emb":  emb if not use_ae else None,  # only load Tessera if AE not used
-                "H":    H,
-                "W":    W,
-            })
+        #     # H, W, _ = tgt.shape
+        #     H, W = tgt.shape[:2]
+        #     self.tiles.append({
+        #         "name": name,
+        #         "ae":  ae,
+        #         "tgt":  tgt,
+        #         # "emb":  emb if not use_ae else None,  # only load Tessera if AE not used
+        #         "H":    H,
+        #         "W":    W,
+        #     })
 
-        if not self.tiles:
-            raise RuntimeError("No valid tiles loaded — check your data directory.")
+        # if not self.tiles:
+        #     raise RuntimeError("No valid tiles loaded — check your data directory.")
 
-        # ── Flat patch index: (tile_idx, row_start, col_start) ───────────────
-        self.index = []
-        for ti, tile in enumerate(self.tiles):
-            H, W, P = tile["H"], tile["W"], patch_size
-            for r in range(0, H - P, P):
-                for c in range(0, W - P, P):
-                    self.index.append((ti, r, c))
+        # # ── Flat patch index: (tile_idx, row_start, col_start) ───────────────
+        # self.index = []
+        # for ti, tile in enumerate(self.tiles):
+        #     H, W, P = tile["H"], tile["W"], patch_size
+        #     for r in range(0, H - P, P):
+        #         for c in range(0, W - P, P):
+        #             self.index.append((ti, r, c))
 
-        print(f"BiomassDataset [{split}]: {len(self.tiles)} tiles, "
-              f"{len(self.index)} patches of size {patch_size}x{patch_size}")
+        # print(f"BiomassDataset [{split}]: {len(self.tiles)} tiles, "
+        #       f"{len(self.index)} patches of size {patch_size}x{patch_size}")
 
     # ── basic methods ─────────────────────────────────────────────────────────
     def __len__(self):
-        return len(self.index)
+        return len(self.samples)
     
     def __getitem__(self, idx):
-        ti, r, c = self.index[idx]
-        P = self.patch_size
-        tile = self.tiles[ti]
+        ae_path, y_path, name = self.samples[idx]
 
-        x = tile["ae"][r:r+P, c:c+P, :].copy()
-        y = tile["tgt"][r:r+P, c:c+P].copy()
+        x = np.load(ae_path)   # (H, W, C)
+        y = np.load(y_path)    # (H, W) or (H, W, 1)
 
-        # Normalize input
-        if self.ae_mean is not None:
-            x = (x - self.ae_mean) / (self.ae_std + 1e-6)
+        if y.ndim == 2:
+            y = y[..., None]
 
-        # Log-transform target (recommended)
-        y = np.log1p(y)
-
-        # Augmentation
-        if self.augment:
-            x, y = self._augment(x, y)
-
-        # To tensor
+        # to tensor
         x = torch.from_numpy(x).permute(2, 0, 1).float()
-        y = torch.from_numpy(y).float()
+        y = torch.from_numpy(y).permute(2, 0, 1).float()
 
-        return x, y
+        return x, y, name
 
     # ── Helpers ───────────────────────────────────────────────────────────────
     def _augment(self, x, y): # verify x [H,W,C] ?
@@ -204,13 +212,13 @@ class BiomassDataset(Dataset):
 
 
 # Normalization
-def compute_normalization_stats(data_dir, sample_tiles=20, subdir="embeddings", out="norm_stats.json"):
+def compute_normalization_stats(data_dir, sample_tiles=20, subdir="ae_embeddings", out="norm_stats.json"):
     """
     Welford online mean/std over a sample of tiles.
     Works for any embedding dimensionality — infers n_channels from first file.
     """
     emb_dir = Path(data_dir) / subdir
-    pattern = "*_x.npy" if subdir == "embeddings" else "*_ae.npy"
+    pattern = "*_ae.npy" if subdir == "ae_embeddings" else "*_ae.npy"
 
     all_paths = list(emb_dir.glob(pattern))
     if not all_paths:
@@ -258,7 +266,7 @@ def make_dataloaders(data_dir, patch_size=64, batch_size=32, use_ae=False, num_w
     Returns (train_loader, val_loader, test_loader).
     Augmentation is enabled only for the training split.
     """
-    train_ds = BiomassDataset(data_dir, patch_size=patch_size, split="train", split_file=split_file, use_ae=use_ae,  augment=True)
+    train_ds = BiomassDataset(data_dir, patch_size=patch_size, split="train", split_file=split_file, use_ae=use_ae, augment=True)
     val_ds   = BiomassDataset(data_dir, patch_size=patch_size, split="val",   split_file=split_file, use_ae=use_ae, augment=False)
     test_ds  = BiomassDataset(data_dir, patch_size=patch_size, split="test",  split_file=split_file, use_ae=use_ae, augment=False)
 
@@ -282,8 +290,8 @@ if __name__ == "__main__":
 
     # Step 1: compute and save normalization stats (run once)
     print("=== Computing normalization stats ===")
-    tessera_stats = compute_normalization_stats(DATA_DIR, subdir="embeddings", out="norm_stats.json")
-    ae_stats      = compute_normalization_stats(DATA_DIR, subdir="ae_embeddings", out="norm_stats_ae.json")
+    # tessera_stats = compute_normalization_stats(DATA_DIR, subdir="embeddings", out="norm_stats.json")
+    ae_stats = compute_normalization_stats(DATA_DIR, sample_tiles=20, subdir="ae_embeddings", out="norm_stats_ae.json")
 
     # Step 2: sanity check
     print("\n=== Sanity check ===")

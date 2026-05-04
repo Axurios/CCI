@@ -22,12 +22,18 @@ TARGET_DIR = os.path.join(OUTPUT_DIR, "targets")
 os.makedirs(AE_DIR, exist_ok=True)
 os.makedirs(TARGET_DIR, exist_ok=True)
 
-ee.Initialize(project="alexcloud-489214")
+# ee.Initialize(project="alexcloud-489214")
+project = os.getenv("EE_PROJECT")
+if project:
+    ee.Initialize(project=project)
+else:
+    print("EE_PROJECT env var not set, using default project")
+    ee.Initialize(project="alexcloud-489214")  # fallback
 
 MASTER_DIM = 256
 BUFFER_DEG = 0.09   # ~10km
-TOTAL_SAMPLES = 10
-MAX_TRIES = 10000   # safety cap
+TOTAL_SAMPLES = 100
+MAX_TRIES = 100000   # safety cap
 
 # ==============================
 # UTIL FUNCTIONS

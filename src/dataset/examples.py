@@ -19,12 +19,11 @@ from geotessera import GeoTessera
 import ee, cv2, tifffile
 
 
-output_dir = "data"
+output_dir = "old_data"
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
 # Setup Directory Structure
-output_dir = "data"
 emb_dir = os.path.join(output_dir, "embeddings")
 ae_emb_dir = os.path.join(output_dir, "ae_embeddings")
 target_dir = os.path.join(output_dir, "targets")

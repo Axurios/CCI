@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!bin/env bash
 
 # This script temporarily adds Mamba to the PATH for the current terminal session.
 
