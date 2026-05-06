@@ -60,11 +60,9 @@ class BiomassDataset(Dataset):
 
     def __init__(self, data_dir, patch_size=64, split="train", split_ratio=(0.7, 0.15, 0.15), use_ae=False, augment=False):
         # self.patch_size = patch_size ; self.use_ae = use_ae ; self.augment = augment
-
-        data_dir = Path(data_dir)
-        # emb_dir  = data_dir / "embeddings"
-        ae_dir   = data_dir / "ae_embeddings"
-        y_dir  = data_dir / "targets"
+        data_dir = Path(data_dir)  # emb_dir  = data_dir / "embeddings"
+        ae_dir = data_dir / "ae_embeddings"
+        y_dir = data_dir / "targets"
 
         all_names = [f.stem.replace("_ae", "") for f in ae_dir.glob("*_ae.npy")]
         all_names = sorted(all_names)
@@ -73,7 +71,7 @@ class BiomassDataset(Dataset):
         random.shuffle(all_names)
         n = len(all_names)
         n_train = int(split_ratio[0] * n)
-        n_val   = int(split_ratio[1] * n)
+        n_val = int(split_ratio[1] * n)
 
         if split == "train":
             names = all_names[:n_train]
@@ -177,8 +175,7 @@ class BiomassDataset(Dataset):
             y = y[..., None]
 
         # to tensor
-        x = torch.from_numpy(x).float()
-        y = torch.from_numpy(y).float()
+        x = torch.from_numpy(x).float() ; y = torch.from_numpy(y).float()
 
         return x, y, name
 
@@ -186,21 +183,19 @@ class BiomassDataset(Dataset):
     def _augment(self, x, y): # verify x [H,W,C] ?
         """Random rot90 + horizontal flip — both applied identically to x and y."""
         k = np.random.randint(0, 4)
-        x = np.rot90(x, k).copy()
-        y = np.rot90(y, k).copy()
+        x = np.rot90(x, k).copy() ; y = np.rot90(y, k).copy()
         if np.random.rand() > 0.5:
-            x = np.fliplr(x).copy()
-            y = np.fliplr(y).copy()
+            x = np.fliplr(x).copy() ; y = np.fliplr(y).copy()
         return x, y
 
     @staticmethod
     def _default_split(names, split, seed=42):
         """Reproducible 70/15/15 train/val/test split."""
-        rng      = np.random.default_rng(seed)
+        rng = np.random.default_rng(seed)
         shuffled = rng.permutation(names).tolist()
-        n        = len(shuffled)
-        cuts     = (int(0.70 * n), int(0.85 * n))
-        splits   = {
+        n = len(shuffled)
+        cuts = (int(0.70 * n), int(0.85 * n))
+        splits = {
             "train": shuffled[:cuts[0]],
             "val":   shuffled[cuts[0]:cuts[1]],
             "test":  shuffled[cuts[1]:],
@@ -243,11 +238,11 @@ def compute_normalization_stats(data_dir, sample_tiles=20, subdir="ae_embeddings
             count += 1
             if mean is None:
                 mean = row.copy()
-                M2   = np.zeros(n_channels)
+                M2 = np.zeros(n_channels)
             else:
                 delta = row - mean
                 mean += delta / count
-                M2   += delta * (row - mean)  # uses updated mean — correct
+                M2 += delta * (row - mean)  # uses updated mean — correct
 
     std = np.sqrt(M2 / count)
     stats = {"mean": mean.tolist(), "std": std.tolist()}
@@ -269,12 +264,12 @@ def make_dataloaders(data_dir, patch_size=64, batch_size=32, use_ae=False, num_w
     Augmentation is enabled only for the training split.
     """
     train_ds = BiomassDataset(data_dir, patch_size=patch_size, split="train", split_file=split_file, use_ae=use_ae, augment=True)
-    val_ds   = BiomassDataset(data_dir, patch_size=patch_size, split="val",   split_file=split_file, use_ae=use_ae, augment=False)
-    test_ds  = BiomassDataset(data_dir, patch_size=patch_size, split="test",  split_file=split_file, use_ae=use_ae, augment=False)
+    val_ds = BiomassDataset(data_dir, patch_size=patch_size, split="val",   split_file=split_file, use_ae=use_ae, augment=False)
+    test_ds = BiomassDataset(data_dir, patch_size=patch_size, split="test",  split_file=split_file, use_ae=use_ae, augment=False)
 
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,  num_workers=num_workers, pin_memory=True)
-    val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
-    test_loader  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
+    val_loader = DataLoader(val_ds,   batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
+    test_loader = DataLoader(test_ds,  batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
 
     return train_loader, val_loader, test_loader
 
