@@ -13,6 +13,55 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
 
+
+def visualize_predictions(x, y_true, y_pred, epoch, save_dir=None):
+    """
+    Visualize a batch sample.
+    
+    Args:
+        x: input tensor [B, H, W, C]
+        y_true: ground truth [B, H, W] or [B, 1, H, W]
+        y_pred: prediction [B, H, W] or [B, 1, H, W]
+    """
+    # take first sample in batch
+    inp = x[0].detach().cpu()
+    gt = y_true[0].detach().cpu()
+    pred = y_pred[0].detach().cpu()
+
+    # remove singleton channel if present
+    if gt.ndim == 3 and gt.shape[0] == 1:
+        gt = gt.squeeze(0)
+    if pred.ndim == 3 and pred.shape[0] == 1:
+        pred = pred.squeeze(0)
+
+    # quick RGB-like visualization of input
+    input_vis = inp.mean(dim=-1)
+
+    fig, ax = plt.subplots(1, 3, figsize=(15, 5))
+
+    ax[0].imshow(input_vis, cmap="viridis")
+    ax[0].set_title("Input")
+
+    im1 = ax[1].imshow(gt, cmap="magma")
+    ax[1].set_title("Ground Truth")
+    plt.colorbar(im1, ax=ax[1], fraction=0.046)
+
+    im2 = ax[2].imshow(pred, cmap="magma")
+    ax[2].set_title("Prediction")
+    plt.colorbar(im2, ax=ax[2], fraction=0.046)
+
+    plt.suptitle(f"Epoch {epoch}")
+
+    if save_dir is not None:
+        os.makedirs(save_dir, exist_ok=True)
+        plt.savefig(os.path.join(save_dir, f"epoch_{epoch}.png"))
+
+    wandb.log({
+        "prediction_example": wandb.Image(fig)
+    })
+
+    plt.close(fig)
+
 @dataclass
 class Config:
     """Configuration for the model architecture."""
@@ -108,7 +157,7 @@ def train(
         model.eval() ; val_loss = 0
         val_bar = tqdm(val_loader, desc=f"Epoch {epoch+1} [Val]", leave=False)
         with torch.no_grad():
-            for x, y, _ in val_bar:
+            for i, (x, y, _) in enumerate(val_bar):
                 x = x.to(device) ; y = y.to(device).squeeze(-1)
                 x_vis = x.mean(dim=-1) ; mask = torch.isinf(x_vis) ; mask = mask.unsqueeze(-1) ; mask = mask.expand_as(x) 
                 x = torch.where(mask, torch.zeros_like(x), x)
@@ -118,6 +167,14 @@ def train(
 
                 val_loss += loss.item()
                 val_bar.set_postfix(val_loss=f"{loss.item():.4f}")
+
+                        # store first batch for visualization
+                if i == 0:
+                    vis_batch = (
+                        x.detach().cpu(),
+                        y.detach().cpu(),
+                        pred.detach().cpu()
+                    )
 
         avg_val_loss = val_loss / len(val_loader)
         pbar_epoch.set_postfix({
@@ -131,6 +188,14 @@ def train(
             "val_loss": avg_val_loss,
             "learning_rate": optimizer.param_groups[0]['lr']
         })
+        if vis_batch is not None and epoch % 10 == 0:
+            visualize_predictions(
+                vis_batch[0],
+                vis_batch[1],
+                vis_batch[2],
+                epoch + 1,
+                save_dir="visu"
+            )
         
         print(f"Epoch {epoch+1}/{cfg.epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}")
     
